@@ -15,7 +15,8 @@
     "scrape:woolworths": "tsx src/scrapers/scrape.ts --store woolworths",
     "scrape:aldi": "tsx src/scrapers/scrape.ts --store aldi",
     "scrape:all": "tsx src/scrapers/scrape.ts",
-    "health": "tsx src/health/check.ts"
+    "health": "tsx src/health/check.ts",
+    "db:seed-prices": "tsx src/db/seed-prices.ts"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +35,7 @@
     "jose": "^6.2.2",
     "lucide-react": "^1.8.0",
     "next": "^14.2.35",
+    "playwright": "^1.59.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.8.1",

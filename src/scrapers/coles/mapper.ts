@@ -1,4 +1,4 @@
-import type { ColesApiProduct } from "./api.js";
+import type { ColesScrapedProduct } from "./scraper.js";
 import type { ScrapedPrice, StoreProductRow } from "../types.js";
 
 /** Coles promotion types we recognise. */
@@ -10,23 +10,23 @@ const KNOWN_SPECIAL_TYPES = new Set([
 ]);
 
 /**
- * Map a raw Coles API product response into a ScrapedPrice.
+ * Map a scraped Coles product into a ScrapedPrice.
  * Returns null if the price is missing or unparseable.
  */
 export function mapColesProduct(
-  raw: ColesApiProduct,
+  raw: ColesScrapedProduct,
   storeProduct: StoreProductRow,
 ): ScrapedPrice | null {
   if (raw.price == null || !isFinite(raw.price)) {
     console.warn(
-      `[ColesMapper] Missing or invalid price for product ${storeProduct.id} (SKU: ${raw.id})`,
+      `[ColesMapper] Missing or invalid price for product ${storeProduct.id} (${raw.name})`,
     );
     return null;
   }
 
   const specialType =
-    raw.promotionType && KNOWN_SPECIAL_TYPES.has(raw.promotionType)
-      ? raw.promotionType
+    raw.specialType && KNOWN_SPECIAL_TYPES.has(raw.specialType)
+      ? raw.specialType
       : null;
 
   const isSpecial =

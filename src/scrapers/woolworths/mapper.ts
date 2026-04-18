@@ -1,28 +1,28 @@
-import type { WoolworthsApiProduct } from "./api.js";
+import type { WoolworthsScrapedProduct } from "./scraper.js";
 import type { ScrapedPrice, StoreProductRow } from "../types.js";
 
 /**
- * Derive the special type from Woolworths boolean flags.
- * Priority: IsHalfPrice > HasMultiBuyDiscount > IsOnSpecial (generic).
+ * Derive the special type from scraped Woolworths boolean flags.
+ * Priority: isHalfPrice > hasMultiBuyDiscount > isOnSpecial (generic).
  */
-function deriveSpecialType(raw: WoolworthsApiProduct): string | null {
-  if (raw.IsHalfPrice) return "half_price";
-  if (raw.HasMultiBuyDiscount) return "multi_buy";
-  if (raw.IsOnSpecial) return "prices_dropped";
+function deriveSpecialType(raw: WoolworthsScrapedProduct): string | null {
+  if (raw.isHalfPrice) return "half_price";
+  if (raw.hasMultiBuyDiscount) return "multi_buy";
+  if (raw.isOnSpecial) return "prices_dropped";
   return null;
 }
 
 /**
- * Map a raw Woolworths API product response into a ScrapedPrice.
+ * Map a scraped Woolworths product into a ScrapedPrice.
  * Returns null if the price is missing or unparseable.
  */
 export function mapWoolworthsProduct(
-  raw: WoolworthsApiProduct,
+  raw: WoolworthsScrapedProduct,
   storeProduct: StoreProductRow,
 ): ScrapedPrice | null {
-  if (raw.Price == null || !isFinite(raw.Price)) {
+  if (raw.price == null || !isFinite(raw.price)) {
     console.warn(
-      `[WoolworthsMapper] Missing or invalid price for product ${storeProduct.id} (Stockcode: ${raw.Stockcode})`,
+      `[WoolworthsMapper] Missing or invalid price for product ${storeProduct.id} (${raw.name})`,
     );
     return null;
   }
@@ -31,15 +31,15 @@ export function mapWoolworthsProduct(
 
   const isSpecial =
     specialType !== null &&
-    raw.WasPrice != null &&
-    raw.Price < raw.WasPrice;
+    raw.wasPrice != null &&
+    raw.price < raw.wasPrice;
 
   return {
     productId: storeProduct.productId,
     storeId: storeProduct.storeId,
-    price: raw.Price.toFixed(2),
-    unitPrice: raw.CupPrice != null ? raw.CupPrice.toFixed(4) : null,
-    unitMeasure: raw.CupMeasure ?? null,
+    price: raw.price.toFixed(2),
+    unitPrice: raw.cupPrice != null ? raw.cupPrice.toFixed(4) : null,
+    unitMeasure: raw.cupMeasure ?? null,
     isSpecial,
     specialType: isSpecial ? specialType : null,
   };
