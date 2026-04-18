@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { Search } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { CategoryFilter } from "@/components/category-filter";
-import { searchProducts, getCategoryCounts } from "@/lib/search";
+import { searchProducts, getCategories } from "@/lib/queries";
+import type { ProductSearchResult, StorePriceInfo } from "@/lib/queries";
+import type { ProductWithPrices, StorePrice, CategoryCount } from "@/types/product";
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string; category?: string }>;
@@ -37,6 +39,33 @@ function SearchResultsHeader({
   );
 }
 
+/** Map StorePriceInfo from queries.ts to StorePrice for ProductCard. */
+function mapStorePrice(info: StorePriceInfo): StorePrice {
+  return {
+    storeSlug: info.storeSlug as "coles" | "woolworths" | "aldi",
+    storeName: info.storeName,
+    price: info.price ? parseFloat(info.price) : null,
+    unitPrice: info.unitPrice ? parseFloat(info.unitPrice) : null,
+    unitMeasure: info.unitMeasure,
+    isSpecial: info.isSpecial,
+    isFakeSpecial: info.isFakeSpecial,
+    lastUpdated: info.lastUpdated ? new Date(info.lastUpdated) : null,
+  };
+}
+
+/** Map ProductSearchResult from queries.ts to ProductWithPrices for ProductCard. */
+function mapProduct(result: ProductSearchResult): ProductWithPrices {
+  return {
+    id: result.id,
+    name: result.name,
+    brand: result.brand,
+    packSize: result.packSize,
+    category: result.category,
+    imageUrl: null,
+    storePrices: result.stores.map(mapStorePrice),
+  };
+}
+
 function NoResults({ query }: { query: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -58,14 +87,28 @@ async function SearchResults({
   query: string;
   category: string;
 }) {
-  // In production, this would query the database directly as a server component
-  const allResults = searchProducts(query);
-  const filteredResults = searchProducts(query, category || undefined);
-  const categoryCounts = getCategoryCounts(allResults);
+  // Query the database for matching products (server component, async is fine)
+  const { products: dbResults, total } = await searchProducts(
+    query,
+    category || null,
+    1,
+    100,
+  );
+  const filteredResults = dbResults.map(mapProduct);
+
+  // Fetch all categories with counts from the database
+  const dbCategories = await getCategories();
+  const categoryCounts: CategoryCount[] = dbCategories.map((c) => ({
+    category: c.name,
+    count: c.count,
+  }));
+
+  // Total count across all categories (for the "All" pill)
+  const allCount = categoryCounts.reduce((sum, c) => sum + c.count, 0);
 
   return (
     <>
-      <SearchResultsHeader query={query} count={filteredResults.length} />
+      <SearchResultsHeader query={query} count={total} />
 
       <div className="flex flex-col gap-6 pt-6 lg:flex-row">
         {/* Category filter: horizontal bar on mobile, sidebar on desktop */}
@@ -73,7 +116,7 @@ async function SearchResults({
           <aside className="w-full shrink-0 lg:w-56">
             <CategoryFilter
               categories={categoryCounts}
-              totalCount={allResults.length}
+              totalCount={allCount}
             />
           </aside>
         )}
