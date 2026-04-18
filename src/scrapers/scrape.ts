@@ -169,7 +169,7 @@ async function main(): Promise<void> {
   console.info(`[Scraper] BasketWise price scraper starting (store: ${storeName})...`);
 
   // Rate limiter: 2.5 seconds between requests for polite scraping
-  const rateLimiter = new RateLimiter(2500);
+  const rateLimiter = new RateLimiter(4000);
 
   const providers: PriceProvider[] = [];
 

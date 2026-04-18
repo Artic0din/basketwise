@@ -92,41 +92,71 @@ export class ColesScraper {
     url.searchParams.set("pageNumber", "1");
     url.searchParams.set("pageSize", String(DEFAULT_PAGE_SIZE));
 
-    try {
-      console.info(`[ColesScraper] Fetching: ${url.toString()}`);
+    const maxRetries = 3;
 
-      const response = await fetch(url.toString(), {
-        headers: REQUEST_HEADERS,
-      });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.info(`[ColesScraper] Fetching: ${url.toString()}${attempt > 1 ? ` (attempt ${attempt})` : ""}`);
 
-      if (!response.ok) {
+        const response = await fetch(url.toString(), {
+          headers: REQUEST_HEADERS,
+        });
+
+        if (!response.ok) {
+          console.error(
+            `[ColesScraper] API returned ${response.status} for "${searchTerm}"`,
+          );
+          if (attempt < maxRetries) {
+            const backoffMs = attempt * 5000;
+            console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
+            await new Promise((r) => setTimeout(r, backoffMs));
+            continue;
+          }
+          return [];
+        }
+
+        const text = await response.text();
+        if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+          console.error(`[ColesScraper] Got HTML instead of JSON for "${searchTerm}" (bot detection)`);
+          if (attempt < maxRetries) {
+            const backoffMs = attempt * 8000;
+            console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
+            await new Promise((r) => setTimeout(r, backoffMs));
+            continue;
+          }
+          return [];
+        }
+
+        const data = JSON.parse(text) as ColesApiResponse;
+
+        if (!data.catalogEntryView || data.catalogEntryView.length === 0) {
+          console.warn(
+            `[ColesScraper] No products returned for "${searchTerm}"`,
+          );
+          return [];
+        }
+
+        console.info(
+          `[ColesScraper] Found ${data.catalogEntryView.length} of ${data.recordSetTotal} total results`,
+        );
+
+        return data.catalogEntryView.map((p) => this.mapApiProduct(p));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error(
-          `[ColesScraper] API returned ${response.status} for "${searchTerm}"`,
+          `[ColesScraper] Error searching for "${searchTerm}": ${message}`,
         );
+        if (attempt < maxRetries) {
+          const backoffMs = attempt * 5000;
+          console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
+          await new Promise((r) => setTimeout(r, backoffMs));
+          continue;
+        }
         return [];
       }
-
-      const data = (await response.json()) as ColesApiResponse;
-
-      if (!data.catalogEntryView || data.catalogEntryView.length === 0) {
-        console.warn(
-          `[ColesScraper] No products returned for "${searchTerm}"`,
-        );
-        return [];
-      }
-
-      console.info(
-        `[ColesScraper] Found ${data.catalogEntryView.length} of ${data.recordSetTotal} total results`,
-      );
-
-      return data.catalogEntryView.map((p) => this.mapApiProduct(p));
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[ColesScraper] Error searching for "${searchTerm}": ${message}`,
-      );
-      return [];
     }
+
+    return [];
   }
 
   /**
