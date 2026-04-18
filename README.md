@@ -1,5 +1,7 @@
 # BasketWise
 
+Australian grocery price comparison. See [BRIEF.md](./BRIEF.md) for the full product spec.
+
 > Australian grocery price comparison app with basket optimisation, unit pricing, and automated fake-special detection across Coles, Woolworths, and Aldi.
 
 **Type:** Application

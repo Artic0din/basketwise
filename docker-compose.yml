@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: basketwise
+      POSTGRES_PASSWORD: basketwise
+      POSTGRES_DB: basketwise
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U basketwise"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  scraper:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://basketwise:basketwise@postgres:5432/basketwise
+      COLES_API_KEY: ${COLES_API_KEY}
+      WOOLWORTHS_API_KEY: ${WOOLWORTHS_API_KEY}
+
+volumes:
+  pgdata:
