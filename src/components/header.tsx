@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Search, ShoppingCart, LogOut, User, Crown, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchDialog } from "@/components/search-dialog";
@@ -61,31 +62,31 @@ export function Header() {
             <span className="font-bold text-xl">BasketWise</span>
           </div>
           <nav className="flex items-center space-x-6 text-sm font-medium">
-            <a
+            <Link
               href="/"
               className="transition-colors hover:text-foreground/80 text-foreground"
             >
               Home
-            </a>
-            <a
-              href="/compare"
+            </Link>
+            <Link
+              href="/search"
               className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
-              Compare
-            </a>
-            <a
-              href="/categories"
-              className="transition-colors hover:text-foreground/80 text-muted-foreground"
-            >
-              Categories
-            </a>
-            <a
+              Browse
+            </Link>
+            <Link
               href="/specials"
               className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
               Specials
-            </a>
-            <a
+            </Link>
+            <Link
+              href="/basket"
+              className="transition-colors hover:text-foreground/80 text-muted-foreground"
+            >
+              Basket
+            </Link>
+            <Link
               href="/favourites"
               className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
@@ -93,7 +94,7 @@ export function Header() {
                 <Heart className="h-3 w-3" />
                 Favourites
               </span>
-            </a>
+            </Link>
           </nav>
           <div className="flex flex-1 items-center justify-end space-x-2">
             <Button
