@@ -4,7 +4,6 @@ import { db } from "../db/index.js";
 import { priceRecords, storeProducts, stores } from "../db/schema.js";
 import type { PriceProvider, ScrapedPrice, ScrapeResult } from "./types.js";
 import { RateLimiter } from "./rate-limiter.js";
-import { launchBrowser, closeBrowser } from "./browser.js";
 import { ColesProvider } from "./coles/provider.js";
 import { WoolworthsProvider } from "./woolworths/provider.js";
 import { AldiProvider } from "./aldi/provider.js";
@@ -169,38 +168,29 @@ async function main(): Promise<void> {
   const storeName = parseStoreArg();
   console.info(`[Scraper] BasketWise price scraper starting (store: ${storeName})...`);
 
-  // Launch shared browser for Playwright-based providers
-  const browser = await launchBrowser();
-
-  // Rate limiter: 2.5 seconds between page loads for polite scraping
+  // Rate limiter: 2.5 seconds between requests for polite scraping
   const rateLimiter = new RateLimiter(2500);
 
   const providers: PriceProvider[] = [];
 
   if (storeName === "coles" || storeName === "all") {
-    providers.push(new ColesProvider(browser, rateLimiter));
+    providers.push(new ColesProvider(rateLimiter));
   }
 
   if (storeName === "woolworths" || storeName === "all") {
-    providers.push(new WoolworthsProvider(browser, rateLimiter));
+    providers.push(new WoolworthsProvider(rateLimiter));
   }
 
   if (storeName === "aldi" || storeName === "all") {
     providers.push(new AldiProvider(rateLimiter));
   }
 
-  try {
-    await runAllScrapers(providers, db);
-  } finally {
-    // Always close the browser, even if scrapers fail
-    await closeBrowser();
-  }
+  await runAllScrapers(providers, db);
 
   process.exit(0);
 }
 
-main().catch(async (err: unknown) => {
+main().catch((err: unknown) => {
   console.error("[Scraper] Fatal error:", err);
-  await closeBrowser().catch(() => {});
   process.exit(1);
 });

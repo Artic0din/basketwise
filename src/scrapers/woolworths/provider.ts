@@ -1,4 +1,3 @@
-import type { Browser } from "playwright";
 import type { PriceProvider, ScrapedPrice, StoreProductRow } from "../types.js";
 import type { RateLimiter } from "../rate-limiter.js";
 import { WoolworthsScraper, type WoolworthsScrapedProduct } from "./scraper.js";
@@ -70,8 +69,8 @@ export class WoolworthsProvider implements PriceProvider {
   readonly storeSlug = "woolworths";
   private readonly scraper: WoolworthsScraper;
 
-  constructor(browser: Browser, rateLimiter: RateLimiter) {
-    this.scraper = new WoolworthsScraper(browser, rateLimiter);
+  constructor(rateLimiter: RateLimiter) {
+    this.scraper = new WoolworthsScraper(rateLimiter);
   }
 
   async fetchPrices(
