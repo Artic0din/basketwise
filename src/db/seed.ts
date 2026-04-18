@@ -36,11 +36,16 @@ async function seed(): Promise<void> {
   // ── 2. Seed products ────────────────────────────────────────────────
   console.log("Seeding products...");
 
-  for (const product of SEED_PRODUCTS) {
-    await db
-      .insert(products)
-      .values(product)
-      .onConflictDoNothing({ target: products.name });
+  // Check if products already exist (idempotent)
+  const existingProducts = await db
+    .select({ name: products.name })
+    .from(products);
+  const existingNames = new Set(existingProducts.map((p) => p.name));
+
+  const newProducts = SEED_PRODUCTS.filter((p) => !existingNames.has(p.name));
+
+  if (newProducts.length > 0) {
+    await db.insert(products).values(newProducts);
   }
 
   console.log(`  Seeded ${SEED_PRODUCTS.length} products`);
