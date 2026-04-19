@@ -27,24 +27,29 @@ export interface CategoryCount {
   count: number;
 }
 
-/** Store colour configuration. */
+/** Store colour configuration using BasketWise design system tokens. */
 export const STORE_COLOURS: Record<
   string,
   { bg: string; text: string; pill: string }
 > = {
   coles: {
-    bg: "bg-red-600",
-    text: "text-red-600",
-    pill: "bg-red-600 text-white",
+    bg: "bg-[var(--store-coles)]",
+    text: "text-[var(--store-coles)]",
+    pill: "bg-[var(--store-coles)] text-white",
   },
   woolworths: {
-    bg: "bg-green-600",
-    text: "text-green-600",
-    pill: "bg-green-600 text-white",
+    bg: "bg-[var(--store-woolies)]",
+    text: "text-[var(--store-woolies)]",
+    pill: "bg-[var(--store-woolies)] text-white",
   },
   aldi: {
-    bg: "bg-blue-600",
-    text: "text-blue-600",
-    pill: "bg-blue-600 text-white",
+    bg: "bg-[var(--store-aldi-blue)]",
+    text: "text-[var(--store-aldi-blue)]",
+    pill: "bg-[var(--store-aldi-blue)] text-white",
+  },
+  iga: {
+    bg: "bg-[var(--store-iga)]",
+    text: "text-[var(--store-iga)]",
+    pill: "bg-[var(--store-iga)] text-white",
   },
 };

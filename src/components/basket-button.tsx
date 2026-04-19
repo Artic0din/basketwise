@@ -23,7 +23,7 @@ export function BasketButton() {
         size="lg"
         className={cn(
           "h-14 w-14 rounded-full shadow-lg",
-          "bg-emerald-600 hover:bg-emerald-700",
+          "bg-leaf-500 hover:bg-leaf-600",
           "transition-transform hover:scale-105",
         )}
         aria-label={`View basket with ${itemCount} items`}
@@ -34,7 +34,7 @@ export function BasketButton() {
             className={cn(
               "absolute -right-2.5 -top-2.5",
               "flex h-5 min-w-[1.25rem] items-center justify-center",
-              "rounded-full bg-white px-1 text-xs font-bold text-emerald-700",
+              "rounded-full bg-white px-1 text-xs font-bold text-leaf-700",
             )}
           >
             {itemCount > 99 ? "99+" : itemCount}

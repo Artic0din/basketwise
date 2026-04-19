@@ -5,7 +5,11 @@ import { ProductCard } from "@/components/product-card";
 import { CategoryFilter } from "@/components/category-filter";
 import { searchProducts, getCategories } from "@/lib/queries";
 import type { ProductSearchResult, StorePriceInfo } from "@/lib/queries";
-import type { ProductWithPrices, StorePrice, CategoryCount } from "@/types/product";
+import type {
+  ProductWithPrices,
+  StorePrice,
+  CategoryCount,
+} from "@/types/product";
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string; category?: string }>;
@@ -19,10 +23,10 @@ function SearchResultsHeader({
   count: number;
 }) {
   return (
-    <div className="flex items-center gap-3 pb-4 border-b">
-      <Search className="h-5 w-5 text-muted-foreground" />
+    <div className="flex items-center gap-3 border-b border-cream-200 pb-4">
+      <Search className="h-5 w-5 text-ink-500" />
       <div>
-        <h1 className="text-xl font-semibold">
+        <h1 className="font-display text-2xl text-ink-900">
           {query ? (
             <>
               Results for &ldquo;{query}&rdquo;
@@ -31,7 +35,7 @@ function SearchResultsHeader({
             "All Products"
           )}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="font-mono text-xs text-ink-500">
           {count} {count === 1 ? "product" : "products"} found
         </p>
       </div>
@@ -68,10 +72,12 @@ function mapProduct(result: ProductSearchResult): ProductWithPrices {
 
 function NoResults({ query }: { query: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
-      <h2 className="text-lg font-semibold">No products found</h2>
-      <p className="text-sm text-muted-foreground mt-1 max-w-md">
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-cream-300 py-16 text-center">
+      <Search className="mb-4 h-12 w-12 text-ink-300" />
+      <h2 className="font-display text-2xl text-ink-900">
+        No products found
+      </h2>
+      <p className="mt-1 max-w-md text-sm text-ink-500">
         {query
           ? `We couldn't find any products matching "${query}". Try a different search term or browse by category.`
           : "Try searching for a product name, brand, or category."}
@@ -87,7 +93,6 @@ async function SearchResults({
   query: string;
   category: string;
 }) {
-  // Query the database for matching products (server component, async is fine)
   const { products: dbResults, total } = await searchProducts(
     query,
     category || null,
@@ -96,14 +101,12 @@ async function SearchResults({
   );
   const filteredResults = dbResults.map(mapProduct);
 
-  // Fetch all categories with counts from the database
   const dbCategories = await getCategories();
   const categoryCounts: CategoryCount[] = dbCategories.map((c) => ({
     category: c.name,
     count: c.count,
   }));
 
-  // Total count across all categories (for the "All" pill)
   const allCount = categoryCounts.reduce((sum, c) => sum + c.count, 0);
 
   return (
@@ -111,7 +114,7 @@ async function SearchResults({
       <SearchResultsHeader query={query} count={total} />
 
       <div className="flex flex-col gap-6 pt-6 lg:flex-row">
-        {/* Category filter: horizontal bar on mobile, sidebar on desktop */}
+        {/* Category filter */}
         {categoryCounts.length > 0 && (
           <aside className="w-full shrink-0 lg:w-56">
             <CategoryFilter
@@ -126,7 +129,7 @@ async function SearchResults({
           {filteredResults.length === 0 ? (
             <NoResults query={query} />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredResults.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -166,7 +169,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <Suspense
         fallback={
           <div className="flex items-center justify-center py-16">
-            <span className="text-muted-foreground">Searching...</span>
+            <span className="font-mono text-sm text-ink-500">
+              Searching...
+            </span>
           </div>
         }
       >

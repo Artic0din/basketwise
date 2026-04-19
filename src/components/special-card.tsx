@@ -31,7 +31,7 @@ function DiscountBadge({ percent }: { percent: number }) {
     <span
       className={cn(
         "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold text-white",
-        percent >= 50 ? "bg-emerald-600" : "bg-amber-500",
+        percent >= 50 ? "bg-leaf-600" : "bg-[var(--bw-amber-500)]",
       )}
     >
       -{percent}%

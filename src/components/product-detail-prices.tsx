@@ -88,7 +88,7 @@ export function ProductDetailPrices({ stores }: ProductDetailPricesProps) {
             key={store.storeId}
             className={cn(
               "flex items-center gap-4 rounded-lg border p-4 transition-colors",
-              isCheapest && "bg-emerald-50 border-emerald-200",
+              isCheapest && "bg-leaf-50 border-leaf-300/40",
             )}
           >
             {/* Store pill */}
@@ -126,13 +126,13 @@ export function ProductDetailPrices({ stores }: ProductDetailPricesProps) {
             {/* Badges */}
             <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5">
               {isCheapest && (
-                <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs">
+                <Badge className="bg-leaf-500 text-white hover:bg-leaf-600 text-xs">
                   Best Price
                 </Badge>
               )}
               {store.isFakeSpecial && (
                 <div className="group relative">
-                  <Badge className="bg-rose-600 text-white hover:bg-rose-700 text-xs">
+                  <Badge className="bg-tomato-500 text-white hover:bg-tomato-500/90 text-xs">
                     Not actually a saving
                   </Badge>
                   <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden w-52 -translate-x-1/2 rounded-md bg-foreground px-2.5 py-1.5 text-xs text-background shadow-lg group-hover:block">
@@ -142,12 +142,12 @@ export function ProductDetailPrices({ stores }: ProductDetailPricesProps) {
                 </div>
               )}
               {hasDiscount && specialLabel && (
-                <Badge className="bg-amber-500 text-white hover:bg-amber-600 text-xs">
+                <Badge className="bg-[var(--bw-amber-500)] text-white hover:bg-[var(--bw-amber-500)]/90 text-xs">
                   {specialLabel}
                 </Badge>
               )}
               {hasDiscount && !specialLabel && (
-                <Badge className="bg-amber-500 text-white hover:bg-amber-600 text-xs">
+                <Badge className="bg-[var(--bw-amber-500)] text-white hover:bg-[var(--bw-amber-500)]/90 text-xs">
                   Special
                 </Badge>
               )}

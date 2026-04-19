@@ -55,13 +55,13 @@ export function SavingsCalculator() {
         {/* Results */}
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg bg-secondary p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold text-green-600">
+            <p className="text-2xl sm:text-3xl font-bold text-leaf-500">
               ${weeklySaving.toFixed(0)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">saved per week</p>
           </div>
           <div className="rounded-lg bg-secondary p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold text-green-600">
+            <p className="text-2xl sm:text-3xl font-bold text-leaf-500">
               ${annualSaving.toFixed(0)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">saved per year</p>

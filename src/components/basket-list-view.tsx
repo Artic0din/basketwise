@@ -164,7 +164,7 @@ export function BasketListView() {
       </div>
       <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+          className="h-full rounded-full bg-leaf-500 transition-all duration-300"
           style={{
             width: items.length > 0 ? `${(checkedCount / items.length) * 100}%` : "0%",
           }}
@@ -205,7 +205,7 @@ export function BasketListView() {
                       "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2",
                       "transition-colors duration-150",
                       isChecked
-                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        ? "border-emerald-500 bg-leaf-500 text-white"
                         : "border-muted-foreground/40",
                     )}
                   >

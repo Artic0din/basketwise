@@ -1,34 +1,27 @@
 export function Footer() {
   return (
-    <footer className="border-t bg-muted/40">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          {/* Links */}
-          <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a
-              href="/privacy"
-              className="transition-colors hover:text-foreground"
-            >
-              Privacy
-            </a>
-            <a
-              href="/terms"
-              className="transition-colors hover:text-foreground"
-            >
-              Terms
-            </a>
-          </nav>
-
-          {/* Disclaimer */}
-          <p className="text-xs text-muted-foreground text-center sm:text-right max-w-md">
-            Prices updated every 12 hours. Not affiliated with Coles,
-            Woolworths, or Aldi.
-          </p>
-        </div>
-
-        <div className="mt-4 text-center text-xs text-muted-foreground">
-          &copy; 2026 BasketWise
-        </div>
+    <footer className="border-t border-cream-200">
+      <div className="container mx-auto flex items-center gap-3 px-6 py-6 text-xs text-ink-500">
+        <span className="font-mono">BasketWise</span>
+        <div className="flex-1" />
+        <nav className="flex items-center gap-6">
+          <a
+            href="/privacy"
+            className="bw-transition transition-colors hover:text-ink-900"
+          >
+            Privacy
+          </a>
+          <a
+            href="/terms"
+            className="bw-transition transition-colors hover:text-ink-900"
+          >
+            Terms
+          </a>
+        </nav>
+        <span className="hidden sm:inline">
+          Prices updated every 12 hours. Not affiliated with Coles, Woolworths,
+          or Aldi.
+        </span>
       </div>
     </footer>
   );

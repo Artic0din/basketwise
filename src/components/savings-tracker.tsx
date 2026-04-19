@@ -73,11 +73,11 @@ export function SavingsTracker() {
     : "the start";
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-green-50 px-3 py-2 text-sm dark:bg-green-950/30">
-      <TrendingDown className="h-4 w-4 text-green-600" />
+    <div className="flex items-center gap-2 rounded-lg border border-leaf-200 bg-leaf-50 px-3 py-2 text-sm">
+      <TrendingDown className="h-4 w-4 text-leaf-600" />
       <span>
         You&apos;ve saved{" "}
-        <strong className="text-green-600">
+        <strong className="text-leaf-600">
           ${displayAmount.toFixed(2)}
         </strong>{" "}
         across {data.basketCount} basket{data.basketCount !== 1 ? "s" : ""} since{" "}

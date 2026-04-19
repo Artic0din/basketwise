@@ -6,9 +6,9 @@ const config: Config = {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1.5rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1240px",
       },
     },
     extend: {
@@ -46,11 +46,54 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* BasketWise design system palette */
+        leaf: {
+          50: "var(--bw-leaf-50)",
+          100: "var(--bw-leaf-100)",
+          200: "var(--bw-leaf-200)",
+          300: "var(--bw-leaf-300)",
+          400: "var(--bw-leaf-400)",
+          500: "var(--bw-leaf-500)",
+          600: "var(--bw-leaf-600)",
+          700: "var(--bw-leaf-700)",
+          800: "var(--bw-leaf-800)",
+          900: "var(--bw-leaf-900)",
+        },
+        cream: {
+          50: "var(--bw-cream-50)",
+          100: "var(--bw-cream-100)",
+          200: "var(--bw-cream-200)",
+          300: "var(--bw-cream-300)",
+        },
+        ink: {
+          300: "var(--bw-ink-300)",
+          500: "var(--bw-ink-500)",
+          700: "var(--bw-ink-700)",
+          800: "var(--bw-ink-800)",
+          900: "var(--bw-ink-900)",
+        },
+        tomato: {
+          100: "var(--bw-tomato-100)",
+          500: "var(--bw-tomato-500)",
+        },
+        amber: {
+          100: "var(--bw-amber-100)",
+          500: "var(--bw-amber-500)",
+        },
+        "store-woolies": "var(--store-woolies)",
+        "store-coles": "var(--store-coles)",
+        "store-aldi-blue": "var(--store-aldi-blue)",
+        "store-iga": "var(--store-iga)",
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "Georgia", "serif"],
+        sans: ["var(--font-body)", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SF Mono", "Menlo", "monospace"],
       },
       keyframes: {
         "accordion-down": {

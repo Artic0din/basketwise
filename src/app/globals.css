@@ -4,48 +4,63 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 215 25% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 9%;
-    --primary: 215 25% 15%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 215 25% 15%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 215 25% 15%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 215 25% 15%;
-    --radius: 0.5rem;
-  }
+    /* BasketWise Design System tokens */
+    --bw-leaf-50: #F1F7EC;
+    --bw-leaf-100: #DFEDD0;
+    --bw-leaf-200: #C2DDA6;
+    --bw-leaf-300: #9BC576;
+    --bw-leaf-400: #78AD4F;
+    --bw-leaf-500: #5B9434;
+    --bw-leaf-600: #467527;
+    --bw-leaf-700: #365A1F;
+    --bw-leaf-800: #283F17;
+    --bw-leaf-900: #1A2A0F;
 
-  .dark {
-    --background: 215 25% 9%;
-    --foreground: 210 40% 98%;
-    --card: 215 25% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 215 25% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 215 25% 15%;
-    --secondary: 215 25% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 25% 15%;
-    --muted-foreground: 215 16% 64%;
-    --accent: 215 25% 15%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 215 25% 15%;
-    --input: 215 25% 15%;
-    --ring: 216 34% 17%;
+    --bw-cream-50: #FBF8F1;
+    --bw-cream-100: #F4EFE2;
+    --bw-cream-200: #E7DFC8;
+    --bw-cream-300: #D2C7A8;
+
+    --bw-ink-900: #1A1A18;
+    --bw-ink-800: #2B2B27;
+    --bw-ink-700: #4A4A44;
+    --bw-ink-500: #7A7770;
+    --bw-ink-300: #B0ACA2;
+
+    --bw-tomato-500: #E24B3C;
+    --bw-tomato-100: #FBDAD4;
+    --bw-amber-500: #E8A93B;
+    --bw-amber-100: #FBE8C0;
+
+    /* Store brand colours */
+    --store-woolies: #178841;
+    --store-coles: #E01A22;
+    --store-aldi-blue: #1D4B9E;
+    --store-aldi-yellow: #F7C400;
+    --store-aldi-red: #E31E26;
+    --store-iga: #C8142B;
+
+    /* Semantic tokens mapped to shadcn variables */
+    --background: 43 52% 97%;        /* cream-50 #FBF8F1 */
+    --foreground: 56 7% 10%;          /* ink-900 #1A1A18 */
+    --card: 0 0% 100%;                /* white surfaces */
+    --card-foreground: 56 7% 10%;     /* ink-900 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 56 7% 10%;
+    --primary: 99 47% 39%;             /* leaf-500 #5B9434 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 31% 92%;           /* cream-100 #F4EFE2 */
+    --secondary-foreground: 56 7% 10%;
+    --muted: 40 31% 92%;               /* cream-100 */
+    --muted-foreground: 50 3% 46%;     /* ink-500 #7A7770 */
+    --accent: 99 47% 39%;              /* leaf-500 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 5 73% 56%;          /* tomato-500 #E24B3C */
+    --destructive-foreground: 0 0% 100%;
+    --border: 39 28% 84%;              /* cream-200 #E7DFC8 */
+    --input: 37 23% 75%;               /* cream-300 #D2C7A8 */
+    --ring: 99 47% 39%;                /* leaf-500 */
+    --radius: 0.75rem;                  /* 12px */
   }
 }
 
@@ -55,6 +70,25 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* BasketWise custom utility classes */
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), 'Georgia', serif;
+    font-style: italic;
+  }
+
+  .font-price {
+    font-family: var(--font-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+    font-feature-settings: 'tnum';
+    letter-spacing: -0.01em;
+  }
+
+  .bw-transition {
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    transition-duration: 200ms;
   }
 }
