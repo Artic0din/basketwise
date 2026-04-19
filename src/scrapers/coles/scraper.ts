@@ -12,12 +12,26 @@ const COLES_API_URL =
 
 const DEFAULT_PAGE_SIZE = 48;
 
-const REQUEST_HEADERS: Record<string, string> = {
-  "User-Agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-  Accept: "application/json",
-  "Accept-Language": "en-AU,en;q=0.9",
-};
+/**
+ * Build request headers, optionally including the Coles mobile API subscription key.
+ * When COLES_API_KEY is set, the Ocp-Apim-Subscription-Key header is added
+ * which may help bypass bot detection on shop.coles.com.au.
+ */
+function buildRequestHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    Accept: "application/json",
+    "Accept-Language": "en-AU,en;q=0.9",
+  };
+
+  const apiKey = process.env.COLES_API_KEY;
+  if (apiKey) {
+    headers["Ocp-Apim-Subscription-Key"] = apiKey;
+  }
+
+  return headers;
+}
 
 /**
  * Structured product data extracted from a Coles search result.
@@ -99,7 +113,7 @@ export class ColesScraper {
         console.info(`[ColesScraper] Fetching: ${url.toString()}${attempt > 1 ? ` (attempt ${attempt})` : ""}`);
 
         const response = await fetch(url.toString(), {
-          headers: REQUEST_HEADERS,
+          headers: buildRequestHeaders(),
         });
 
         if (!response.ok) {
