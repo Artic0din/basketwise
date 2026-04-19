@@ -1,17 +1,17 @@
+import { execFile } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { RateLimiter } from "../rate-limiter.js";
 
 /**
- * Woolworths website search API.
- *
- * Uses the public search API at woolworths.com.au which returns JSON
- * product data. First fetches the homepage to get session cookies,
- * then POSTs search queries. No API key required.
+ * Path to the Python fetch proxy script.
+ * Uses Python's urllib to bypass PerimeterX bot detection that blocks Node.js fetch.
  */
-const WOOLWORTHS_SEARCH_URL =
-  "https://www.woolworths.com.au/apis/ui/Search/products";
-const WOOLWORTHS_HOME_URL = "https://www.woolworths.com.au/";
-
-const DEFAULT_PAGE_SIZE = 48;
+const PYTHON_FETCH_SCRIPT = resolve(
+  fileURLToPath(import.meta.url),
+  "../../python/fetch.py",
+);
 
 /**
  * Structured product data extracted from a Woolworths search result.
@@ -27,72 +27,31 @@ export interface WoolworthsScrapedProduct {
   hasMultiBuyDiscount: boolean;
 }
 
-interface WoolworthsApiProduct {
+/**
+ * Shape of a single product returned by the Python fetch script for Woolworths.
+ */
+interface WoolworthsPythonProduct {
   Name?: string;
-  Brand?: string;
-  Price?: number;
-  WasPrice?: number;
-  CupPrice?: number;
-  CupMeasure?: string;
+  Price?: number | null;
+  WasPrice?: number | null;
+  CupPrice?: number | null;
+  CupMeasure?: string | null;
   IsOnSpecial?: boolean;
   IsHalfPrice?: boolean;
-  IsNew?: boolean;
   HasMultiBuyDiscount?: boolean;
-  Stockcode?: number;
-}
-
-interface WoolworthsSearchResponse {
-  Products?: Array<{ Products?: WoolworthsApiProduct[] }>;
-  SearchResultsCount?: number;
+  Stockcode?: number | null;
 }
 
 export class WoolworthsScraper {
-  private sessionCookies: string | null = null;
-
   constructor(private readonly rateLimiter: RateLimiter) {}
 
   /**
-   * Get session cookies from the Woolworths homepage.
-   */
-  private async initSession(): Promise<void> {
-    if (this.sessionCookies) return;
-
-    try {
-      console.info("[WoolworthsScraper] Initializing session...");
-      const response = await fetch(WOOLWORTHS_HOME_URL, {
-        method: "GET",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-          Accept: "text/html",
-        },
-        redirect: "follow",
-      });
-
-      const setCookieHeaders = response.headers.getSetCookie?.() ?? [];
-      if (setCookieHeaders.length > 0) {
-        this.sessionCookies = setCookieHeaders
-          .map((c) => c.split(";")[0])
-          .join("; ");
-        console.info(
-          `[WoolworthsScraper] Session initialized (${setCookieHeaders.length} cookies)`,
-        );
-      } else {
-        console.warn("[WoolworthsScraper] No cookies received from homepage");
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[WoolworthsScraper] Session init failed: ${message}`);
-    }
-  }
-
-  /**
    * Search Woolworths for a product name and return all matching results.
+   * Delegates HTTP calls to a Python subprocess to bypass bot detection.
    */
   async searchProducts(
     searchTerm: string,
   ): Promise<WoolworthsScrapedProduct[]> {
-    await this.initSession();
     await this.rateLimiter.acquire();
 
     const maxRetries = 3;
@@ -103,42 +62,18 @@ export class WoolworthsScraper {
           `[WoolworthsScraper] Searching: "${searchTerm}"${attempt > 1 ? ` (attempt ${attempt})` : ""}`,
         );
 
-        const headers: Record<string, string> = {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        };
+        const stdout = await this.runPythonFetch(searchTerm);
+        const parsed: WoolworthsPythonProduct[] | { error: string } =
+          JSON.parse(stdout) as
+            | WoolworthsPythonProduct[]
+            | { error: string };
 
-        if (this.sessionCookies) {
-          headers["Cookie"] = this.sessionCookies;
-        }
-
-        const body = JSON.stringify({
-          SearchTerm: searchTerm,
-          PageSize: DEFAULT_PAGE_SIZE,
-          PageNumber: 1,
-          SortType: "TraderRelevance",
-          Location: `/shop/search/products?searchTerm=${encodeURIComponent(searchTerm)}`,
-        });
-
-        const response = await fetch(WOOLWORTHS_SEARCH_URL, {
-          method: "POST",
-          headers,
-          body,
-          signal: AbortSignal.timeout(15000),
-        });
-
-        if (!response.ok) {
+        if (!Array.isArray(parsed)) {
+          const errorMsg =
+            "error" in parsed ? parsed.error : "Unknown Python error";
           console.error(
-            `[WoolworthsScraper] API returned ${response.status} for "${searchTerm}"`,
+            `[WoolworthsScraper] Python fetch error: ${errorMsg}`,
           );
-
-          // Try refreshing session on auth errors
-          if (response.status === 401 || response.status === 403) {
-            this.sessionCookies = null;
-            await this.initSession();
-          }
 
           if (attempt < maxRetries) {
             const backoffMs = attempt * 5000;
@@ -151,10 +86,7 @@ export class WoolworthsScraper {
           return [];
         }
 
-        const data = (await response.json()) as WoolworthsSearchResponse;
-        const products = this.parseResponse(data);
-
-        if (products.length === 0) {
+        if (parsed.length === 0) {
           console.warn(
             `[WoolworthsScraper] No products returned for "${searchTerm}"`,
           );
@@ -162,10 +94,15 @@ export class WoolworthsScraper {
         }
 
         console.info(
-          `[WoolworthsScraper] Found ${products.length} products of ${data.SearchResultsCount ?? "unknown"} total`,
+          `[WoolworthsScraper] Found ${parsed.length.toString()} products`,
         );
 
-        return products;
+        return parsed
+          .filter(
+            (p): p is WoolworthsPythonProduct & { Name: string } =>
+              typeof p.Name === "string" && p.Name.length > 0,
+          )
+          .map((p) => this.mapPythonProduct(p));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(
@@ -188,37 +125,60 @@ export class WoolworthsScraper {
   }
 
   /**
-   * Parse the search API response into structured products.
+   * Spawn Python to fetch Woolworths product data.
    */
-  private parseResponse(
-    data: WoolworthsSearchResponse,
-  ): WoolworthsScrapedProduct[] {
-    const products: WoolworthsScrapedProduct[] = [];
+  private runPythonFetch(searchTerm: string): Promise<string> {
+    return new Promise((resolvePromise, reject) => {
+      execFile(
+        "python3",
+        [
+          PYTHON_FETCH_SCRIPT,
+          "--store",
+          "woolworths",
+          "--query",
+          searchTerm,
+        ],
+        { timeout: 30_000 },
+        (error, stdout, stderr) => {
+          if (stderr) {
+            console.error(
+              `[WoolworthsScraper] Python stderr: ${stderr.trim()}`,
+            );
+          }
+          if (error) {
+            reject(
+              new Error(`Python process failed: ${error.message}`),
+            );
+            return;
+          }
+          resolvePromise(stdout.trim());
+        },
+      );
+    });
+  }
 
-    const groups = data.Products ?? [];
-    for (const group of groups) {
-      const items = group.Products ?? [];
-      for (const item of items) {
-        if (!item.Name) continue;
+  /**
+   * Map a Python-returned product to a WoolworthsScrapedProduct.
+   */
+  private mapPythonProduct(
+    raw: WoolworthsPythonProduct & { Name: string },
+  ): WoolworthsScrapedProduct {
+    const isOnSpecial = raw.IsOnSpecial ?? false;
 
-        const isOnSpecial = item.IsOnSpecial ?? false;
-
-        products.push({
-          name: item.Name,
-          price: item.Price ?? null,
-          wasPrice:
-            isOnSpecial && item.WasPrice != null && item.WasPrice !== item.Price
-              ? item.WasPrice
-              : null,
-          cupPrice: item.CupPrice ?? null,
-          cupMeasure: item.CupMeasure ?? null,
-          isOnSpecial,
-          isHalfPrice: item.IsHalfPrice ?? false,
-          hasMultiBuyDiscount: item.HasMultiBuyDiscount ?? false,
-        });
-      }
-    }
-
-    return products;
+    return {
+      name: raw.Name,
+      price: raw.Price ?? null,
+      wasPrice:
+        isOnSpecial &&
+        raw.WasPrice != null &&
+        raw.WasPrice !== raw.Price
+          ? raw.WasPrice
+          : null,
+      cupPrice: raw.CupPrice ?? null,
+      cupMeasure: raw.CupMeasure ?? null,
+      isOnSpecial,
+      isHalfPrice: raw.IsHalfPrice ?? false,
+      hasMultiBuyDiscount: raw.HasMultiBuyDiscount ?? false,
+    };
   }
 }

@@ -1,37 +1,17 @@
+import { execFile } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { RateLimiter } from "../rate-limiter.js";
 
 /**
- * Coles Online product search API base URL.
- *
- * This uses the shop.coles.com.au search API which returns JSON product data
- * including prices, unit prices, and brand info — without requiring browser
- * rendering or bypassing bot detection (PerimeterX/hCaptcha on www.coles.com.au).
+ * Path to the Python fetch proxy script.
+ * Uses Python's urllib to bypass Incapsula bot detection that blocks Node.js fetch.
  */
-const COLES_API_URL =
-  "https://shop.coles.com.au/search/resources/store/20601/productview/bySearchTerm";
-
-const DEFAULT_PAGE_SIZE = 48;
-
-/**
- * Build request headers, optionally including the Coles mobile API subscription key.
- * When COLES_API_KEY is set, the Ocp-Apim-Subscription-Key header is added
- * which may help bypass bot detection on shop.coles.com.au.
- */
-function buildRequestHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    "User-Agent":
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    Accept: "application/json",
-    "Accept-Language": "en-AU,en;q=0.9",
-  };
-
-  const apiKey = process.env.COLES_API_KEY;
-  if (apiKey) {
-    headers["Ocp-Apim-Subscription-Key"] = apiKey;
-  }
-
-  return headers;
-}
+const PYTHON_FETCH_SCRIPT = resolve(
+  fileURLToPath(import.meta.url),
+  "../../python/fetch.py",
+);
 
 /**
  * Structured product data extracted from a Coles search result.
@@ -47,46 +27,14 @@ export interface ColesScrapedProduct {
 }
 
 /**
- * Raw product entry from the Coles Online search API.
- * Field names are minified single-letter keys.
+ * Shape of a single product returned by the Python fetch script for Coles.
  */
-interface ColesApiProduct {
-  /** Product name */
+interface ColesPythonProduct {
   n: string;
-  /** Manufacturer/brand */
   m: string;
-  /** Pricing object */
-  p1?: {
-    /** Current price (string) */
-    o?: string;
-    /** Original/was price (string) — equals `o` when not on special */
-    l4?: string;
-  };
-  /** Unit price string e.g. "$1.55/ 1L" */
-  u2?: string;
-  /** Product attributes */
-  a?: {
-    /** Size/volume e.g. ["3L"] */
-    O3?: string[];
-    /** Unknown boolean flags */
-    E1?: string[];
-    W1?: string[];
-    T1?: string[];
-  };
-  /** Part number e.g. "8150288P" */
-  p?: string;
-  /** SEO slug */
-  s?: string;
-  /** Thumbnail path */
-  t?: string;
-  /** Unique ID */
-  u?: string;
-}
-
-interface ColesApiResponse {
-  recordSetCount: string;
-  recordSetTotal: string;
-  catalogEntryView?: ColesApiProduct[];
+  p1_o?: string | null;
+  p1_l4?: string | null;
+  u2?: string | null;
 }
 
 export class ColesScraper {
@@ -94,56 +42,39 @@ export class ColesScraper {
 
   /**
    * Search Coles for a product name and return all matching results.
-   * Uses the shop.coles.com.au JSON API instead of scraping HTML.
+   * Delegates HTTP calls to a Python subprocess to bypass bot detection.
    */
   async searchProducts(
     searchTerm: string,
   ): Promise<ColesScrapedProduct[]> {
     await this.rateLimiter.acquire();
 
-    const url = new URL(`${COLES_API_URL}/${encodeURIComponent(searchTerm)}`);
-    url.searchParams.set("orderBy", "0");
-    url.searchParams.set("pageNumber", "1");
-    url.searchParams.set("pageSize", String(DEFAULT_PAGE_SIZE));
-
     const maxRetries = 3;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.info(`[ColesScraper] Fetching: ${url.toString()}${attempt > 1 ? ` (attempt ${attempt})` : ""}`);
+        console.info(
+          `[ColesScraper] Searching: "${searchTerm}"${attempt > 1 ? ` (attempt ${attempt})` : ""}`,
+        );
 
-        const response = await fetch(url.toString(), {
-          headers: buildRequestHeaders(),
-        });
+        const stdout = await this.runPythonFetch(searchTerm);
+        const parsed: ColesPythonProduct[] | { error: string } =
+          JSON.parse(stdout) as ColesPythonProduct[] | { error: string };
 
-        if (!response.ok) {
-          console.error(
-            `[ColesScraper] API returned ${response.status} for "${searchTerm}"`,
-          );
+        if (!Array.isArray(parsed)) {
+          const errorMsg =
+            "error" in parsed ? parsed.error : "Unknown Python error";
+          console.error(`[ColesScraper] Python fetch error: ${errorMsg}`);
           if (attempt < maxRetries) {
             const backoffMs = attempt * 5000;
-            console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
+            console.info(`[ColesScraper] Retrying in ${(backoffMs / 1000).toString()}s...`);
             await new Promise((r) => setTimeout(r, backoffMs));
             continue;
           }
           return [];
         }
 
-        const text = await response.text();
-        if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
-          console.error(`[ColesScraper] Got HTML instead of JSON for "${searchTerm}" (bot detection)`);
-          if (attempt < maxRetries) {
-            const backoffMs = attempt * 8000;
-            console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
-            await new Promise((r) => setTimeout(r, backoffMs));
-            continue;
-          }
-          return [];
-        }
-
-        const data = JSON.parse(text) as ColesApiResponse;
-
-        if (!data.catalogEntryView || data.catalogEntryView.length === 0) {
+        if (parsed.length === 0) {
           console.warn(
             `[ColesScraper] No products returned for "${searchTerm}"`,
           );
@@ -151,10 +82,10 @@ export class ColesScraper {
         }
 
         console.info(
-          `[ColesScraper] Found ${data.catalogEntryView.length} of ${data.recordSetTotal} total results`,
+          `[ColesScraper] Found ${parsed.length.toString()} products`,
         );
 
-        return data.catalogEntryView.map((p) => this.mapApiProduct(p));
+        return parsed.map((p) => this.mapPythonProduct(p));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         console.error(
@@ -162,7 +93,7 @@ export class ColesScraper {
         );
         if (attempt < maxRetries) {
           const backoffMs = attempt * 5000;
-          console.info(`[ColesScraper] Retrying in ${backoffMs / 1000}s...`);
+          console.info(`[ColesScraper] Retrying in ${(backoffMs / 1000).toString()}s...`);
           await new Promise((r) => setTimeout(r, backoffMs));
           continue;
         }
@@ -174,18 +105,38 @@ export class ColesScraper {
   }
 
   /**
-   * Map a raw API product entry to a ColesScrapedProduct.
+   * Spawn Python to fetch Coles product data.
    */
-  private mapApiProduct(raw: ColesApiProduct): ColesScrapedProduct {
-    const price = this.parsePrice(raw.p1?.o ?? null);
-    const wasPrice = this.parsePrice(raw.p1?.l4 ?? null);
+  private runPythonFetch(searchTerm: string): Promise<string> {
+    return new Promise((resolvePromise, reject) => {
+      execFile(
+        "python3",
+        [PYTHON_FETCH_SCRIPT, "--store", "coles", "--query", searchTerm],
+        { timeout: 30_000, env: { ...process.env } },
+        (error, stdout, stderr) => {
+          if (stderr) {
+            console.error(`[ColesScraper] Python stderr: ${stderr.trim()}`);
+          }
+          if (error) {
+            reject(new Error(`Python process failed: ${error.message}`));
+            return;
+          }
+          resolvePromise(stdout.trim());
+        },
+      );
+    });
+  }
+
+  /**
+   * Map a Python-returned product to a ColesScrapedProduct.
+   */
+  private mapPythonProduct(raw: ColesPythonProduct): ColesScrapedProduct {
+    const price = this.parsePrice(raw.p1_o ?? null);
+    const wasPrice = this.parsePrice(raw.p1_l4 ?? null);
     const unitPriceResult = this.parseUnitPrice(raw.u2 ?? null);
 
-    // A product is on special when the was price exists and exceeds the current price
     const isOnSpecial =
-      price !== null &&
-      wasPrice !== null &&
-      wasPrice > price;
+      price !== null && wasPrice !== null && wasPrice > price;
 
     const brandPrefix = raw.m ? `${raw.m} ` : "";
     const name = `${brandPrefix}${raw.n}`;
@@ -220,10 +171,7 @@ export class ColesScraper {
   ): { price: number | null; measure: string | null } {
     if (!text) return { price: null, measure: null };
 
-    // Match patterns like "$1.55/ 1L" or "$2.25/ 100G" or "$2.90/ 1L"
-    const match = text.match(
-      /\$?(\d+\.?\d*)\s*\/?\s*(\d*\s*\w+)?/,
-    );
+    const match = text.match(/\$?(\d+\.?\d*)\s*\/?\s*(\d*\s*\w+)?/);
     if (!match?.[1]) return { price: null, measure: null };
 
     const price = parseFloat(match[1]);
