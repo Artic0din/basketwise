@@ -1,4 +1,4 @@
-import type { PriceProvider, ScrapedPrice, StoreProductRow } from "../types.js";
+import type { PriceProvider, ScrapedPrice, StoreProductRow, FetchPricesResult } from "../types.js";
 import type { RateLimiter } from "../rate-limiter.js";
 import { AldiScraper } from "./scraper.js";
 import { mapAldiProduct } from "./mapper.js";
@@ -16,7 +16,7 @@ export class AldiProvider implements PriceProvider {
 
   async fetchPrices(
     storeProducts: StoreProductRow[],
-  ): Promise<(ScrapedPrice | null)[]> {
+  ): Promise<FetchPricesResult> {
     const results: (ScrapedPrice | null)[] = [];
     let skipped = 0;
 
@@ -58,6 +58,7 @@ export class AldiProvider implements PriceProvider {
       }
     }
 
-    return results;
+    // Aldi uses individual product page fetching, no pool-based discovery
+    return { matched: results, discovered: [] };
   }
 }

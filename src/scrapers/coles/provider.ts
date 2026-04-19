@@ -1,7 +1,18 @@
-import type { PriceProvider, ScrapedPrice, StoreProductRow } from "../types.js";
+import type {
+  PriceProvider,
+  ScrapedPrice,
+  StoreProductRow,
+  FetchPricesResult,
+  DiscoveredProduct,
+} from "../types.js";
 import type { RateLimiter } from "../rate-limiter.js";
 import { ColesScraper, type ColesScrapedProduct } from "./scraper.js";
 import { mapColesProduct } from "./mapper.js";
+import {
+  normaliseForMatching,
+  isQualifyingMatch,
+  categoryFromSearchTerm,
+} from "../matching.js";
 
 /**
  * Broad category search terms that cover all 10 product categories.
@@ -32,65 +43,25 @@ const CATEGORY_SEARCH_TERMS: readonly string[] = [
 ] as const;
 
 /**
- * Normalise a product name for fuzzy matching.
- * Strips store branding, lowercases, removes extra whitespace.
- */
-function normaliseName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\bcoles\b/gi, "")
-    .replace(/\b(brand|own\s*brand)\b/gi, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Score how well a scraped product name matches a target name.
- * Returns a value between 0 (no match) and 1 (exact match).
- * Uses word overlap — generous threshold since we're matching
- * "Full Cream Milk 2L" against "Coles Full Cream Milk 3L".
- */
-function matchScore(scraped: string, target: string): number {
-  const normScraped = normaliseName(scraped);
-  const normTarget = normaliseName(target);
-
-  if (normScraped === normTarget) return 1.0;
-
-  const targetWords = normTarget.split(" ");
-  const scrapedWords = new Set(normScraped.split(" "));
-  let matchedWords = 0;
-
-  for (const word of targetWords) {
-    if (scrapedWords.has(word)) {
-      matchedWords++;
-    }
-  }
-
-  return targetWords.length > 0 ? matchedWords / targetWords.length : 0;
-}
-
-/**
  * Find the best matching scraped product for a store product name.
- * Uses a 40% threshold since we're matching across broad category results.
+ * Uses improved core-word matching with 30% threshold or 2+ matching words.
  */
 function findBestMatch(
   pool: ColesScrapedProduct[],
   storeName: string,
 ): ColesScrapedProduct | null {
-  const MIN_SCORE = 0.4;
   let bestProduct: ColesScrapedProduct | null = null;
   let bestScore = 0;
 
   for (const result of pool) {
-    const score = matchScore(result.name, storeName);
-    if (score > bestScore) {
+    const { qualifies, score } = isQualifyingMatch(result.name, storeName);
+    if (qualifies && score > bestScore) {
       bestScore = score;
       bestProduct = result;
     }
   }
 
-  return bestScore >= MIN_SCORE ? bestProduct : null;
+  return bestProduct;
 }
 
 /**
@@ -103,7 +74,7 @@ function deduplicateProducts(
   const unique: ColesScrapedProduct[] = [];
 
   for (const product of products) {
-    const key = normaliseName(product.name);
+    const key = normaliseForMatching(product.name);
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(product);
@@ -124,19 +95,29 @@ export class ColesProvider implements PriceProvider {
 
   async fetchPrices(
     storeProducts: StoreProductRow[],
-  ): Promise<(ScrapedPrice | null)[]> {
+  ): Promise<FetchPricesResult> {
     // Phase 1: Bulk category searches to build a product pool
     console.info(
       `[ColesProvider] Phase 1: Running ${CATEGORY_SEARCH_TERMS.length} category searches (pageSize=48)...`,
     );
 
     const allResults: ColesScrapedProduct[] = [];
+    /** Track which search term found each product for category derivation. */
+    const productSearchTerms = new Map<string, string>();
 
     for (let i = 0; i < CATEGORY_SEARCH_TERMS.length; i++) {
       const term = CATEGORY_SEARCH_TERMS[i]!;
 
       try {
         const results = await this.scraper.searchProducts(term);
+
+        for (const result of results) {
+          const normKey = normaliseForMatching(result.name);
+          if (!productSearchTerms.has(normKey)) {
+            productSearchTerms.set(normKey, term);
+          }
+        }
+
         allResults.push(...results);
 
         console.info(
@@ -164,6 +145,7 @@ export class ColesProvider implements PriceProvider {
     const results: (ScrapedPrice | null)[] = [];
     let matched = 0;
     let skipped = 0;
+    const matchedPoolNames = new Set<string>();
 
     for (const sp of storeProducts) {
       if (!sp.storeName) {
@@ -186,6 +168,7 @@ export class ColesProvider implements PriceProvider {
       const mapped = mapColesProduct(bestMatch, sp);
       if (mapped) {
         matched++;
+        matchedPoolNames.add(normaliseForMatching(bestMatch.name));
         console.info(
           `[ColesProvider] Matched: "${sp.storeName}" -> "${bestMatch.name}" ($${bestMatch.price?.toFixed(2) ?? "?"})`,
         );
@@ -197,6 +180,34 @@ export class ColesProvider implements PriceProvider {
       `[ColesProvider] Phase 2 complete: ${matched}/${storeProducts.length} matched, ${skipped} skipped`,
     );
 
-    return results;
+    // Phase 3: Collect unmatched products for auto-creation
+    const discovered: DiscoveredProduct[] = [];
+
+    for (const product of pool) {
+      if (product.price == null || !isFinite(product.price)) continue;
+
+      const normName = normaliseForMatching(product.name);
+      if (matchedPoolNames.has(normName)) continue;
+
+      const searchTerm = productSearchTerms.get(normName) ?? "other";
+      const category = categoryFromSearchTerm(searchTerm);
+
+      discovered.push({
+        name: product.name,
+        category,
+        brand: null,
+        price: product.price.toFixed(2),
+        unitPrice: product.unitPrice != null ? product.unitPrice.toFixed(4) : null,
+        unitMeasure: product.unitOfMeasure ?? null,
+        isSpecial: product.isSpecial,
+        specialType: product.specialType,
+      });
+    }
+
+    console.info(
+      `[ColesProvider] Phase 3: ${discovered.length} unmatched products available for auto-creation`,
+    );
+
+    return { matched: results, discovered };
   }
 }
