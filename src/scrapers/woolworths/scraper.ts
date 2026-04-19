@@ -12,7 +12,7 @@ const WOOLWORTHS_SEARCH_URL =
 
 const WOOLWORTHS_HOME_URL = "https://www.woolworths.com.au/";
 
-const DEFAULT_PAGE_SIZE = 24;
+const DEFAULT_PAGE_SIZE = 48;
 
 const REQUEST_HEADERS: Record<string, string> = {
   "User-Agent":

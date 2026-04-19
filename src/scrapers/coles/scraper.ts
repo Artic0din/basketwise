@@ -10,7 +10,7 @@ import type { RateLimiter } from "../rate-limiter.js";
 const COLES_API_URL =
   "https://shop.coles.com.au/search/resources/store/20601/productview/bySearchTerm";
 
-const DEFAULT_PAGE_SIZE = 24;
+const DEFAULT_PAGE_SIZE = 48;
 
 const REQUEST_HEADERS: Record<string, string> = {
   "User-Agent":

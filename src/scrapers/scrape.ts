@@ -168,8 +168,8 @@ async function main(): Promise<void> {
   const storeName = parseStoreArg();
   console.info(`[Scraper] BasketWise price scraper starting (store: ${storeName})...`);
 
-  // Rate limiter: 2.5 seconds between requests for polite scraping
-  const rateLimiter = new RateLimiter(4000);
+  // Rate limiter: 5 seconds between requests — very polite to avoid bot detection
+  const rateLimiter = new RateLimiter(5000);
 
   const providers: PriceProvider[] = [];
 
