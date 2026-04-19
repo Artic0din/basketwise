@@ -1,5 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn0.woolworths.media",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "shop.coles.com.au",
+        pathname: "/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {

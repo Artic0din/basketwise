@@ -61,7 +61,7 @@ function mapProduct(result: ProductSearchResult): ProductWithPrices {
     brand: result.brand,
     packSize: result.packSize,
     category: result.category,
-    imageUrl: null,
+    imageUrl: result.imageUrl ?? null,
     storePrices: result.stores.map(mapStorePrice),
   };
 }

@@ -18,12 +18,16 @@ const PYTHON_FETCH_SCRIPT = resolve(
  */
 export interface ColesScrapedProduct {
   name: string;
+  brand: string | null;
   price: number | null;
   wasPrice: number | null;
   unitPrice: number | null;
   unitOfMeasure: string | null;
+  packageSize: string | null;
+  sku: string | null;
   isSpecial: boolean;
   specialType: string | null;
+  imageUrl: string | null;
 }
 
 /**
@@ -35,6 +39,10 @@ interface ColesPythonProduct {
   p1_o?: string | null;
   p1_l4?: string | null;
   u2?: string | null;
+  p?: string | null;
+  s?: string | null;
+  packageSize?: string | null;
+  image?: string | null;
 }
 
 export class ColesScraper {
@@ -143,12 +151,18 @@ export class ColesScraper {
 
     return {
       name,
+      brand: typeof raw.m === "string" && raw.m.length > 0 ? raw.m : null,
       price,
       wasPrice: isOnSpecial ? wasPrice : null,
       unitPrice: unitPriceResult.price,
       unitOfMeasure: unitPriceResult.measure,
+      packageSize: typeof raw.packageSize === "string" && raw.packageSize.length > 0 ? raw.packageSize : null,
+      sku: typeof raw.p === "string" && raw.p.length > 0 ? raw.p : null,
       isSpecial: isOnSpecial,
       specialType: isOnSpecial ? "prices_dropped" : null,
+      imageUrl: typeof raw.image === "string" && raw.image.length > 0
+        ? raw.image
+        : null,
     };
   }
 

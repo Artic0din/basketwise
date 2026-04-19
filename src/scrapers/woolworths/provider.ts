@@ -153,6 +153,7 @@ export class WoolworthsProvider implements PriceProvider {
     );
 
     const results: (ScrapedPrice | null)[] = [];
+    const matchedImages = new Map<number, string>();
     let matched = 0;
     let skipped = 0;
     const matchedPoolNames = new Set<string>();
@@ -179,6 +180,9 @@ export class WoolworthsProvider implements PriceProvider {
       if (mapped) {
         matched++;
         matchedPoolNames.add(normaliseForMatching(bestMatch.name));
+        if (bestMatch.imageUrl) {
+          matchedImages.set(sp.productId, bestMatch.imageUrl);
+        }
         console.info(
           `[WoolworthsProvider] Matched: "${sp.storeName}" -> "${bestMatch.name}" ($${bestMatch.price?.toFixed(2) ?? "?"})`,
         );
@@ -206,12 +210,16 @@ export class WoolworthsProvider implements PriceProvider {
       discovered.push({
         name: product.name,
         category,
-        brand: null,
+        brand: product.brand,
+        packSize: product.packageSize,
+        unitOfMeasure: product.unit,
         price: product.price.toFixed(2),
         unitPrice: product.cupPrice != null ? product.cupPrice.toFixed(4) : null,
         unitMeasure: product.cupMeasure ?? null,
         isSpecial: specialType !== null && product.wasPrice != null && product.price < product.wasPrice,
         specialType,
+        imageUrl: product.imageUrl,
+        storeSku: product.stockcode,
       });
     }
 
@@ -219,6 +227,6 @@ export class WoolworthsProvider implements PriceProvider {
       `[WoolworthsProvider] Phase 3: ${discovered.length} unmatched products available for auto-creation`,
     );
 
-    return { matched: results, discovered };
+    return { matched: results, discovered, matchedImages };
   }
 }

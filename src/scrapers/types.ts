@@ -25,6 +25,10 @@ export interface DiscoveredProduct {
   category: string;
   /** Brand name if available from the scraper. */
   brand: string | null;
+  /** Package size string, e.g. "2L", "500g". */
+  packSize: string | null;
+  /** Unit of measure, e.g. "Each", "per litre". */
+  unitOfMeasure: string | null;
   /** Price in decimal string format, e.g. "4.50". */
   price: string;
   /** Unit price if available. */
@@ -35,6 +39,10 @@ export interface DiscoveredProduct {
   isSpecial: boolean;
   /** Special type if on special. */
   specialType: string | null;
+  /** Product image URL from the store CDN. */
+  imageUrl: string | null;
+  /** Store-specific SKU/stockcode. */
+  storeSku: string | null;
 }
 
 /** Result from a provider's fetchPrices call, including discovered products. */
@@ -43,6 +51,8 @@ export interface FetchPricesResult {
   matched: (ScrapedPrice | null)[];
   /** New products discovered that didn't match any existing product. */
   discovered: DiscoveredProduct[];
+  /** Map of productId -> imageUrl for matched products that have images. */
+  matchedImages: Map<number, string>;
 }
 
 /** Store-agnostic contract every scraper provider must implement. */

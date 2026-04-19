@@ -28,6 +28,7 @@ export interface ProductSearchResult {
   brand: string | null;
   packSize: string | null;
   unitOfMeasure: string | null;
+  imageUrl: string | null;
   stores: StorePriceInfo[];
 }
 
@@ -56,9 +57,14 @@ export async function searchProducts(
     conditions.push(eq(products.category, category));
   }
 
-  const whereClause = conditions.length === 1 ? conditions[0] : and(...conditions);
+  // Only include products that have at least one price record
+  conditions.push(
+    sql`EXISTS (SELECT 1 FROM price_records pr WHERE pr.product_id = ${products.id})`,
+  );
 
-  // Count total matches
+  const whereClause = conditions.length === 1 ? conditions[0]! : and(...conditions);
+
+  // Count total matches (only products with prices)
   const countResult = await db
     .select({ count: sql<number>`cast(count(*) as integer)` })
     .from(products)
@@ -70,7 +76,7 @@ export async function searchProducts(
     return { products: [], total: 0 };
   }
 
-  // Fetch matching products
+  // Fetch matching products (only those with price records)
   const matchedProducts = await db
     .select()
     .from(products)
@@ -95,6 +101,7 @@ export async function searchProducts(
     brand: p.brand,
     packSize: p.packSize,
     unitOfMeasure: p.unitOfMeasure,
+    imageUrl: p.imageUrl,
     stores: storePrices.get(p.id) ?? [],
   }));
 
@@ -127,6 +134,7 @@ export async function getProductById(
     brand: product.brand,
     packSize: product.packSize,
     unitOfMeasure: product.unitOfMeasure,
+    imageUrl: product.imageUrl,
     stores: storePrices.get(product.id) ?? [],
   };
 }

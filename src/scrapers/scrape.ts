@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { priceRecords, products, storeProducts, stores } from "../db/schema.js";
 import type { DiscoveredProduct, PriceProvider, ScrapedPrice, ScrapeResult } from "./types.js";
@@ -69,6 +69,14 @@ async function autoCreateProducts(
 
         if (existing.length > 0 && existing[0] != null) {
           productId = existing[0].id;
+
+          // Backfill imageUrl if the existing product lacks one and the scraper found one
+          if (item.imageUrl) {
+            await database
+              .update(products)
+              .set({ imageUrl: item.imageUrl, updatedAt: now })
+              .where(and(eq(products.id, productId), isNull(products.imageUrl)));
+          }
         } else {
           // Create a new Product record
           const inserted = await database
@@ -77,6 +85,9 @@ async function autoCreateProducts(
               name: item.name,
               category: item.category,
               brand: item.brand,
+              packSize: item.packSize,
+              unitOfMeasure: item.unitOfMeasure,
+              imageUrl: item.imageUrl,
               createdAt: now,
               updatedAt: now,
             })
@@ -96,6 +107,7 @@ async function autoCreateProducts(
           .values({
             productId,
             storeId,
+            storeSku: item.storeSku,
             storeName: item.name,
             createdAt: now,
             updatedAt: now,
@@ -240,7 +252,32 @@ export async function runScrape(
     }
   }
 
-  // 6. Auto-create products from discovered (unmatched) items
+  // 6. Backfill image URLs for matched products that currently lack one
+  if (fetchResult.matchedImages.size > 0) {
+    let imageBackfills = 0;
+    for (const [productId, imageUrl] of fetchResult.matchedImages) {
+      try {
+        const result = await database
+          .update(products)
+          .set({ imageUrl, updatedAt: now })
+          .where(and(eq(products.id, productId), isNull(products.imageUrl)));
+
+        if (result.rowCount && result.rowCount > 0) {
+          imageBackfills++;
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[Scraper] Image backfill failed for product ${productId}: ${message}`);
+      }
+    }
+    if (imageBackfills > 0) {
+      console.info(
+        `[Scraper] Backfilled ${imageBackfills} image URLs for existing ${provider.storeName} products`,
+      );
+    }
+  }
+
+  // 7. Auto-create products from discovered (unmatched) items
   const discoveredCount = await autoCreateProducts(
     fetchResult.discovered,
     store.id,

@@ -59,6 +59,6 @@ export class AldiProvider implements PriceProvider {
     }
 
     // Aldi uses individual product page fetching, no pool-based discovery
-    return { matched: results, discovered: [] };
+    return { matched: results, discovered: [], matchedImages: new Map() };
   }
 }

@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -66,12 +68,33 @@ export function ProductCard({ product }: ProductCardProps) {
     >
       <Card className="h-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base leading-tight">
-            {product.name}
-          </CardTitle>
-          <CardDescription>
-            {[product.brand, product.packSize].filter(Boolean).join(" - ")}
-          </CardDescription>
+          <div className="flex gap-3">
+            {/* Product image */}
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
+              {product.imageUrl ? (
+                <Image
+                  src={product.imageUrl}
+                  alt={product.name}
+                  fill
+                  sizes="64px"
+                  className="object-contain"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <ShoppingCart className="h-6 w-6 text-muted-foreground/40" />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base leading-tight">
+                {product.name}
+              </CardTitle>
+              <CardDescription>
+                {[product.brand, product.packSize].filter(Boolean).join(" - ")}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Three-store price grid: stacked on mobile, 3 columns on sm+ */}

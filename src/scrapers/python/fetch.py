@@ -62,14 +62,23 @@ def fetch_woolworths(query: str) -> list[dict[str, object]]:
                 continue
             products.append({
                 "Name": name,
+                "DisplayName": item.get("DisplayName"),
+                "Brand": item.get("Brand"),
+                "Description": item.get("Description"),
                 "Price": item.get("Price"),
                 "WasPrice": item.get("WasPrice"),
+                "SavingsAmount": item.get("SavingsAmount"),
                 "CupPrice": item.get("CupPrice"),
                 "CupMeasure": item.get("CupMeasure"),
+                "CupString": item.get("CupString"),
+                "PackageSize": item.get("PackageSize"),
+                "Unit": item.get("Unit"),
                 "IsOnSpecial": item.get("IsOnSpecial", False),
                 "IsHalfPrice": item.get("IsHalfPrice", False),
+                "IsNew": item.get("IsNew", False),
                 "HasMultiBuyDiscount": item.get("HasMultiBuyDiscount", False),
                 "Stockcode": item.get("Stockcode"),
+                "MediumImageFile": item.get("MediumImageFile"),
             })
 
     return products
@@ -113,12 +122,35 @@ def fetch_coles(query: str) -> list[dict[str, object]]:
     products: list[dict[str, object]] = []
     for entry in data.get("catalogEntryView", []):
         p1 = entry.get("p1", {})
+        # Build image URL from the "t" (thumbnail) field
+        raw_thumb: str = entry.get("t", "") or ""
+        image_url: str | None = None
+        if raw_thumb:
+            if raw_thumb.startswith("/"):
+                image_url = f"https://shop.coles.com.au{raw_thumb}"
+            else:
+                image_url = raw_thumb
+
+        # Extract package size from a.O3 array
+        a_field = entry.get("a", {})
+        o3_value: str | None = None
+        if isinstance(a_field, dict):
+            o3_raw = a_field.get("O3")
+            if isinstance(o3_raw, list) and len(o3_raw) > 0:
+                o3_value = str(o3_raw[0])
+            elif isinstance(o3_raw, str):
+                o3_value = o3_raw
+
         products.append({
             "n": entry.get("n", ""),
             "m": entry.get("m", ""),
             "p1_o": p1.get("o"),
             "p1_l4": p1.get("l4"),
             "u2": entry.get("u2"),
+            "p": entry.get("p"),
+            "s": entry.get("s"),
+            "packageSize": o3_value,
+            "image": image_url,
         })
 
     return products

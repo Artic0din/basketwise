@@ -18,13 +18,22 @@ const PYTHON_FETCH_SCRIPT = resolve(
  */
 export interface WoolworthsScrapedProduct {
   name: string;
+  brand: string | null;
+  description: string | null;
   price: number | null;
   wasPrice: number | null;
+  savingsAmount: number | null;
   cupPrice: number | null;
   cupMeasure: string | null;
+  cupString: string | null;
+  packageSize: string | null;
+  unit: string | null;
   isOnSpecial: boolean;
   isHalfPrice: boolean;
+  isNew: boolean;
   hasMultiBuyDiscount: boolean;
+  stockcode: string | null;
+  imageUrl: string | null;
 }
 
 /**
@@ -32,14 +41,23 @@ export interface WoolworthsScrapedProduct {
  */
 interface WoolworthsPythonProduct {
   Name?: string;
+  DisplayName?: string | null;
+  Brand?: string | null;
+  Description?: string | null;
   Price?: number | null;
   WasPrice?: number | null;
+  SavingsAmount?: number | null;
   CupPrice?: number | null;
   CupMeasure?: string | null;
+  CupString?: string | null;
+  PackageSize?: string | null;
+  Unit?: string | null;
   IsOnSpecial?: boolean;
   IsHalfPrice?: boolean;
+  IsNew?: boolean;
   HasMultiBuyDiscount?: boolean;
-  Stockcode?: number | null;
+  Stockcode?: number | string | null;
+  MediumImageFile?: string | null;
 }
 
 export class WoolworthsScraper {
@@ -167,6 +185,8 @@ export class WoolworthsScraper {
 
     return {
       name: raw.Name,
+      brand: typeof raw.Brand === "string" && raw.Brand.length > 0 ? raw.Brand : null,
+      description: typeof raw.Description === "string" && raw.Description.length > 0 ? raw.Description : null,
       price: raw.Price ?? null,
       wasPrice:
         isOnSpecial &&
@@ -174,11 +194,20 @@ export class WoolworthsScraper {
         raw.WasPrice !== raw.Price
           ? raw.WasPrice
           : null,
+      savingsAmount: raw.SavingsAmount ?? null,
       cupPrice: raw.CupPrice ?? null,
       cupMeasure: raw.CupMeasure ?? null,
+      cupString: typeof raw.CupString === "string" && raw.CupString.length > 0 ? raw.CupString : null,
+      packageSize: typeof raw.PackageSize === "string" && raw.PackageSize.length > 0 ? raw.PackageSize : null,
+      unit: typeof raw.Unit === "string" && raw.Unit.length > 0 ? raw.Unit : null,
       isOnSpecial,
       isHalfPrice: raw.IsHalfPrice ?? false,
+      isNew: raw.IsNew ?? false,
       hasMultiBuyDiscount: raw.HasMultiBuyDiscount ?? false,
+      stockcode: raw.Stockcode != null ? String(raw.Stockcode) : null,
+      imageUrl: typeof raw.MediumImageFile === "string" && raw.MediumImageFile.length > 0
+        ? raw.MediumImageFile
+        : null,
     };
   }
 }
